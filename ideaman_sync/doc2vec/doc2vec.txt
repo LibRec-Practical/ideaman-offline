@@ -1,0 +1,2 @@
+[2021-04-27 21:46:54] - [INFO] - [PID:10272] - [utils.py:load:431] - loading Doc2Vec object from ./doc2vec.model
+[2021-04-27 21:46:54] - [DEBUG] - [PID:10272] - [smart_open_lib.py:open:172] - {'uri': './doc2vec.model', 'mode': 'rb', 'buffering': -1, 'encoding': None, 'errors': None, 'newline': None, 'closefd': True, 'opener': None, 'ignore_ext': False, 'transport_params': None}
