@@ -1,0 +1,4 @@
+worker-id: 033ce79f-8800-49a3-92f2-466b60e08dc8
+logs.users: []
+logs.groups: []
+topology.submitter.user: pytho

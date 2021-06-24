@@ -42,7 +42,7 @@ public class HotRecall implements Recall {
             ArrayList<String> user_ids = mySqlJDBC.getInstance().getUserIds();
             ResultSet res = mySqlJDBC.getInstance().read(
                     "SELECT item_id,COUNT(u_id) as \"click_num\" FROM `click_log`\n" +
-                            "WHERE event_type=1 AND add_time >= DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 7 DAY),'%Y-%m-%d') \n" +
+                            "WHERE event_type=1 AND add_time >= DATE_FORMAT(DATE_SUB(NOW(),INTERVAL 99 DAY),'%Y-%m-%d') \n" +
                             "GROUP BY item_id\n" +
                             "ORDER BY click_num DESC\n" +
                             "LIMIT 2000"
@@ -58,7 +58,7 @@ public class HotRecall implements Recall {
             String item_ids = Strings.join(item_ids_list, ",");
             for (String uid : user_ids
             ) {
-                String sql = String.format("UPDATE user_rec SET hot_recall = \"%s\" WHERE user_id = %s;\n",  item_ids , uid);
+                String sql = String.format("UPDATE user_rec SET hot_recall = \"%s\" WHERE user_id = %s;\n", item_ids, uid);
                 mySqlJDBC.getInstance().write(sql);
             }
         } catch (SQLException throwables) {

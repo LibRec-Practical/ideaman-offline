@@ -7,7 +7,11 @@ import com.alibaba.fastjson.JSON;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Map;
+
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -16,11 +20,15 @@ import org.apache.storm.tuple.Tuple;
 
 public class mysqlBolt extends BaseRichBolt {
     private static final long serialVersionUID = 9063211371729556973L;
+    private OutputCollector collector;
 
     public mysqlBolt() {
     }
 
+    @Override
     public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
+        this.collector = collector;
+
     }
 
     public static boolean validate(String jsonStr) {
@@ -38,114 +46,84 @@ public class mysqlBolt extends BaseRichBolt {
         }
     }
 
+    @Override
     public void execute(Tuple input) {
+
         String input_str = input.getString(0);
+
         if (input_str.indexOf(123) < 0) {
-            System.out.println("Not Json");
         } else {
             input_str = input_str.substring(input_str.indexOf(123));
-            System.out.println("JSON:" + input_str);
+//            System.out.println("JSON:" + input_str);
             new Gson();
-            Map maps = (Map)JSON.parse(input_str);
+            Map maps = (Map) JSON.parse(input_str);
             ideamanLog ideamanlogger = new ideamanLog();
             if (maps.containsKey("headers")) {
                 ideamanlogger.headers = String.valueOf(maps.get("headers"));
             } else {
                 ideamanlogger.headers = "";
             }
-
-            String data_str = String.valueOf(maps.get("data"));
-            Map map = (Map)JSON.parse(data_str);
-            System.out.println("MAP:" + map.keySet());
-            if (map.containsKey("distinct_id")) {
-                ideamanlogger.distinct_id = String.valueOf(map.get("distinct_id"));
+            if (input_str.indexOf(123) < 0) {
             } else {
-                ideamanlogger.distinct_id = "";
-            }
+                input_str = input_str.substring(input_str.indexOf(123));
+                new Gson();
+                Map input_maps = (Map) JSON.parse(input_str);
 
-            if (map.containsKey("timestamp")) {
-                ideamanlogger.timeStamp = String.valueOf(map.get("timestamp"));
-            } else {
-                ideamanlogger.timeStamp = "";
-            }
+                String data_str = String.valueOf(input_maps.get("data"));
+                Map data_map = (Map) JSON.parse(data_str);
 
-            if (map.containsKey("event_type")) {
-                ideamanlogger.event_type = String.valueOf(map.get("event_type"));
-            } else {
-                ideamanlogger.event_type = "";
-            }
+                String event = String.valueOf(data_map.get("event"));
+                if (event.equals("click")) {
+                    String params_str = String.valueOf(data_map.get("params"));
+                    Map params_map = (Map) JSON.parse(params_str);
 
-            if (map.containsKey("event")) {
-                ideamanlogger.event = String.valueOf(map.get("event"));
-            } else {
-                ideamanlogger.event = "";
-            }
+                    if (String.valueOf(params_map.get("paper_id")).length() < 1|| params_map.get("paper_id") == null) {
+                        collector.ack(input);
+                        return;
+                    }
+                    if (String.valueOf(params_map.get("userId")).length() <1 || params_map.get("userId") == null) {
+                        collector.ack(input);
+                        return;
+                    }
+                    String sql = "INSERT INTO click_log (u_id,item_id,event_type) VALUES ('" + params_map.get("userId") + "','" + params_map.get("paper_id") + "','1')";
+                    mysqlUtil.getInstance().write(sql);
+                    ResultSet rs = null;
+                    System.out.println("@@@@@@@"+params_map.get("userId"));
+                    sql = "SELECT item_ids from seq_log where user_id = " + params_map.get("userId");
+                    System.out.println("###########"+sql);
+                    rs = mysqlUtil.getInstance().read(sql);
+                    String item_ids = "";
 
-            if (map.containsKey("project")) {
-                ideamanlogger.project = String.valueOf(map.get("project"));
-            } else {
-                ideamanlogger.project = "";
-            }
+                    try {
+                        while (true) {
+                            if (rs == null || !rs.next()) {
+                                break;
+                            }
+                            item_ids = rs.getString("item_ids");
+                        }
+                    } catch (SQLException throwables) {
+                        collector.ack(input);
+                        return;
+                    }
 
-            if (map.containsKey("properties")) {
-                ideamanlogger.properties = String.valueOf(map.get("properties"));
-            } else {
-                ideamanlogger.properties = "";
+                    if (item_ids.length() == 0) {
+                        item_ids = String.valueOf(params_map.get("paper_id"));
+                        mysqlUtil.getInstance().write("INSERT INTO seq_log VALUES(" + params_map.get("userId") + ",\"" + item_ids + "\");");
+                    } else {
+                        item_ids = item_ids + "," + params_map.get("paper_id");
+                        mysqlUtil.getInstance().write("UPDATE seq_log set item_ids = \"" + item_ids + "\" WHERE user_id = " + params_map.get("userId"));
+                    }
+                }
             }
-
-            if (map.containsKey("system")) {
-                ideamanlogger.system = String.valueOf(map.get("system"));
-            } else {
-                ideamanlogger.system = "";
-            }
-
-            if (map.containsKey("extra_para")) {
-                ideamanlogger.extra_para = String.valueOf(map.get("extra_para"));
-            } else {
-                ideamanlogger.extra_para = "";
-            }
-
-            if (map.containsKey("recommend_scene_id")) {
-                ideamanlogger.recommend_scene_id = String.valueOf(map.get("recommend_scene_id"));
-            } else {
-                ideamanlogger.recommend_scene_id = "";
-            }
-
-            if (map.containsKey("buket_id")) {
-                ideamanlogger.buket_id = String.valueOf(map.get("buket_id"));
-            } else {
-                ideamanlogger.buket_id = "";
-            }
-
-            if (map.containsKey("strategy_id")) {
-                ideamanlogger.strategy_id = String.valueOf(map.get("strategy_id"));
-            } else {
-                ideamanlogger.strategy_id = "";
-            }
-
-            if (map.containsKey("p_datetime")) {
-                ideamanlogger.p_datetime = String.valueOf(map.get("p_datetime"));
-            } else {
-                ideamanlogger.p_datetime = "";
-            }
-
-            if (map.containsKey("is_del")) {
-                ideamanlogger.is_del = String.valueOf(map.get("is_del"));
-            } else {
-                ideamanlogger.is_del = "";
-            }
-
-            System.out.println(ideamanlogger.toMysql());
-            mysqlUtil.getInstance().write(ideamanlogger.toMysql());
-            Map map_cf = (Map)JSON.parse(ideamanlogger.properties);
-            System.out.println("MAP:" + map_cf.keySet());
-            String sql = "INSERT INTO click_log (u_id,item_id,event_type) VALUES ('" + map_cf.get("userId") + "','" + map_cf.get("paperId") + "','" + map_cf.get("event") + "')";
-            System.out.println(sql);
-            mysqlUtil.getInstance().write(sql);
-            System.out.println("写入完成");
         }
+
+        collector.ack(input);
+
+
     }
 
+
+    @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
     }
 }

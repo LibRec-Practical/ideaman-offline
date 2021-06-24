@@ -7,13 +7,15 @@ import time
 from datetime import datetime
 import logging
 import re
-import gensim
+import gensim.models.doc2vec
+import gensim.utils
 import smart_open
 import jieba
-from milvus import Milvus, DataType
+from milvus import Milvus, MetricType
 from stop_words import safe_get_stop_words
 from ideaman_util.paper import Paper
 from ideaman_util.config import *
+from ideaman_util.db import conn, cur
 
 stop_words = safe_get_stop_words('en')
 stopwords = {}.fromkeys(stop_words)
@@ -195,7 +197,7 @@ def train(start_date_str, end_date_str):
     train_corpus = list(read_mysql(start_date_str, end_date_str))
     print(len(train_corpus))
     logging.info("生成模型")
-    model = gensim.models.doc2vec.Doc2Vec(vector_size=128, min_count=32, epochs=512)
+    model = gensim.models.doc2vec.Doc2Vec(vector_size=128, min_count=64, epochs=1024)
     model.build_vocab(train_corpus)
     logging.info("训练模型开始")
     model.train(train_corpus, total_examples=model.corpus_count, epochs=model.epochs)
@@ -211,7 +213,7 @@ def incremental_train(start_date_str, end_date_str):
     model = gensim.models.doc2vec.Doc2Vec.load("./doc2vec.model")
     total_examples = model.corpus_count + len(train_corpus)
     logging.info("训练模型开始")
-    model.train(train_corpus, total_examples=total_examples, epochs=512)
+    model.train(train_corpus, total_examples=model.corpus_count, epochs=model.epochs)
     logging.info("保存模型")
     model.save("./doc2vec.model")
 
@@ -272,6 +274,39 @@ def predict(start_date_str, end_date_str):
             id_list.clear()
             vecs.clear()
 
+def run_offline_paper():
+    client = Milvus(host=milvus_ip, port='19530')
+    cur.execute("SELECT ID ,doc_vector FROM paper")
+    papers = cur.fetchall()
+    for i in papers:
+        try:
+            id = i[0]
+            vec = i[1].split(",")
+            vec = [eval(j) for j in vec]
+            res = client.search(collection_name='ideaman', query_records=[vec], top_k=51)
 
+            status = res[0].code
+            if status == 0:
+                topKqueryResult = [str(j) for j in res[-1]._id_array[0]]
+                paper_vecs = ",".join(topKqueryResult[1:])
+                sql = 'INSERT INTO offline_paper(paper_id , recs) VALUES({} , "{}")'.format(id, paper_vecs)
+                cur.execute(sql)
+                try:
+                    conn.commit()
+                except:
+                    conn.rollback()
+        except:
+            pass
+
+def delete_milvus():
+    client = Milvus(host=milvus_ip, port='19530')
+    print(client.get_collection_stats(collection_name="ideaman"))
+    print(client.get_collection_info("ideaman"))
+    client.drop_collection("ideaman")
+    param = {'collection_name': 'ideaman', 'dimension': 128, 'index_file_size': 1024, 'metric_type': MetricType.L2}
+    client.create_collection(param)
 if __name__ == '__main__':
-    predict(start_date_str, end_date_str)
+    delete_milvus()
+    train(start_date_str, end_date_str)
+    predict(start_date_str,end_date_str)
+    run_offline_paper()

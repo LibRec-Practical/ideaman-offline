@@ -71,7 +71,7 @@ public class mySqlJDBC {
     }
 
     public ArrayList<String> getUserIds() throws SQLException {
-        ResultSet res = read("SELECT id FROM user");
+        ResultSet res = read("SELECT id FROM user WHERE username NOT LIKE '%tmp%'");
         ArrayList<String> user_ids = new ArrayList<>();
         while (res.next()) {
             user_ids.add(res.getString(1));
@@ -88,6 +88,9 @@ public class mySqlJDBC {
                 this.write(sql);
             }
             catch (Exception e){
+                if (e instanceof SQLIntegrityConstraintViolationException){
+                    break;
+                }
             }
         }
     }
@@ -103,16 +106,8 @@ public class mySqlJDBC {
         return instance;
     }
 
-    public static void main(String[] args) throws SQLException {
-        ResultSet rs = mySqlJDBC.getInstance().read("Select * from ideaman.paper Limit 5");
-        while (rs.next()) {
-            System.out.println(rs.getString("title"));
-        }
-        ArrayList<String> rs1 = mySqlJDBC.getInstance().getUserIds();
-        for (String s : rs1
-        ) {
-            System.out.println(rs1);
-        }
+    public static void main(String[] args) throws SQLException, ClassNotFoundException, IOException {
+
     }
 
 }

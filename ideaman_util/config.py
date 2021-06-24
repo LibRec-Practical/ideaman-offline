@@ -1,8 +1,8 @@
 ############# 数据库相关配置 #####################
-mysql_host = '127.0.0.1'
+mysql_host = '42.193.21.38'
 mysql_port = 3306
 mysql_user = 'root'
-mysql_pwd = 'Delete1350'
+mysql_pwd = 'Delete1350$&'
 mysql_db = 'ideaman'
 
 
@@ -15,10 +15,12 @@ download_files_paths = [
 
 ############# 下载历史数据 #####################
 start_date_str = "1999-01-01"
-end_date_str = "2021-04-01"
+end_date_str = "2021-06-01"
 
 ############# Milvus #####################
-milvus_ip = '1.14.43.148'
+milvus_ip = mysql_host
 
 ############## ES #####################
 es_ip = mysql_host
+
+

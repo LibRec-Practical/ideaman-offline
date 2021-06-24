@@ -8,14 +8,13 @@ import org.apache.storm.spout.SchemeAsMultiScheme;
 import org.apache.storm.topology.TopologyBuilder;
 
 public class kfk2mysqlTopology {
-    private static final String BOOTSTRAP_SERVERS = "139.155.255.145:9092";
-    private static final String TOPIC_NAME = "ideaman2";
 
     public kfk2mysqlTopology() {
     }
 
     public static void main(String[] args) {
-        ZkHosts zkHosts = new ZkHosts("139.155.255.145:2181");
+
+        ZkHosts zkHosts = new ZkHosts("192.168.27.136:2181");
         TopologyBuilder builder = new TopologyBuilder();
         SpoutConfig spoutConfig = new SpoutConfig(zkHosts, "ideaman2", "", "librec");
         spoutConfig.scheme = new SchemeAsMultiScheme(new StringScheme());
@@ -27,7 +26,7 @@ public class kfk2mysqlTopology {
 
         try {
             System.out.println("Waiting to consume from kafka");
-            Thread.sleep(3000000L);
+            Thread.sleep(30000000L);
         } catch (Exception var7) {
             System.out.println("Thread interrupted exception : " + var7);
         }
